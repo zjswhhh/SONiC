@@ -65,68 +65,98 @@ Switch traffic to a healthy link / ToR when there is a link failure.
 
 ## <a name='DataSchema'></a>3 Data Schema 
 ### <a name='ConfigDB'></a>3.1 Config DB 
+
 * MUX_LINKMGR|LINK_PROBE
+
   * interval_v4: 100  ; heartbeat probe interval in millisecond, default value is 100.   
+
   * interval_v6: 1000 ; heartbeat probe interval for ipv6 in millisecond, default value is 1000.  
+
   * positive_signal_count: 1 ; event count to confirm a positive state transition, i.e. _unknown_ to _active_.    
+
   * negative_signal_count: 3 ; event count to confirm a negative state transtion, i.e. _active_ to _unknown_.  
+
   * suspend_timer: 500 ; heartbeats will be suspended for duration of suspend_timer when heartbeat state transits from _active_ to _unknown_.  
     __NOTE__:This field is not in use anymore. suspending timeout will depend on interval_v4 and negative_signal_count.  
+
   * interval_pck_loss_count_update: 300 ; interval to report heartbeat loss count to stream telemetry in heartbeat counts, minimum value is 50, default value is 300.  
 
 * MUX_LINKMGR|MUXLOGGER
+
   * log_verbosity: trace|debug|info|warning|error|fatal ; log verbosity of _linkmgrd_.  
 
 * MUX_CABLE|\<PORTNAME\>
+
   * server_ipv4: ipv4 prefix 
+
   * server_ipv6: ipv6 prefix
+
   * state: auto|manual|active|standby ; `auto` mode port will switch mux state proactively (based on heartbeat loss or link down event etc.), `manual` mode will switch reactively to any mux state change, `active` or `standby` will switch mux first and act like `manual` mode. 
 
 * PEER_SWITCH|\<DEVICENAME\>
+
   * address_ipv4: ipv4 address
 
 * TUNNEL|\<MUXTUNNELNAME\>
+
   * tunnel_type: IPINIP
+
   * dst_ip: IPv4 address
+
   * dscp_mode: uniform
+
   * encap_ecn_mode: standard
+
   * ecn_mode: copy_from_outer
+
   * ttl_mode: pipe
 
 * DEVICE_METADATA|localhost
+
   * type: ToRRouter
+
   * peer_switch: hostname of peer switch
+
   * subtype: DualToR
 
 * VLAN|\<VlanName\>
+
   * mac: mac address
 
 ### <a name='APPDB'></a>3.2 APP DB
 
 * MUX_CABLE_TABLE:\<PORTNAME\>
+
   * state: active|standby ; for linkmgrd to communicate with orchagent.
 
 * HW_MUX_CABLE_TABLE:\<PORTNAME\>
+
   * state: active|standby ; for orchagent to communicate with transceiver daemon.
 
 * MUX_CABLE_COMMAND_TABLE:\<PORTNAME\>
+
   * command: probe ; for linkmgrd to communicate with transceiver daemon.
 
 * MUX_CABLE_RESPONSE_TABLE:\<PORTNAME\>
+
   * response: active|standby|unknown
 
 ### <a name='STATEDB'></a>3.3 STATE DB
 
 * MUX_CABLE_TABLE|\<PORTNAME\>
+
   * state: active|standby|unknown|error ; written by orchagent.
 
 * HW_MUX_CABLE_TABLE|\<PORTNAME\>
+
   * state: active|standby|unknown ; written by transceiver daemon.
 
 * MUX_LINKMGR_TABLE|\<PORTNAME\>
+
   * state: healthy|unhealthy|uninitialized ; written by linkmgrd to reflect current healthy state combining mux state and link prober state. Uninitialized indicates that this port did not complete initialization and is considered incapable for auto failover. 
 
 * MUX_METRICS_TABLE|\<PORTNAME\>
+
   * \<app name\>\_switch\_\<target state\>_start: yyyy-mmm-dd hh:mm:ss.uuuuu ; time when \<app name\> started switch operation to state \<target state\>. \<app name\> is one of transceiver daemon, orchagent, or linkmgrd and \<target state\> is one of active, standby, or unknown.
   
   * \<app name\>\_switch\_\<target state\>_end: yyyy-mmm-dd hh:mm:ss.uuuuuu ; time when \<app name\> completed switch operation to state \<target state\>. \<app name\> and \<target state\> are as defined above.
