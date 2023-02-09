@@ -1,21 +1,3 @@
-<!-- vscode-markdown-toc-config
-	numbering=false
-	autoSave=true
-	/vscode-markdown-toc-config -->
-<!-- /vscode-markdown-toc -->
-# SONiC Active-Standby Dual ToR HLD
-
-## <a name='Revision'></a>Revision
-
-|  Rev  |   Date   |    Author     | Change Description             |
-| :---: | :------: | :-----------: | ------------------------------ |
-|  0.1  | 01/03/23 |  Jing Zhang   | Initial version                |
-
-## <a name='Scope'></a>Scope
-
-This document provides an introduction of the high-level design of SONiC Dual ToR with Smart Y-Cable solution. 
-
-## <a name='Content'></a>Content
 <!-- vscode-markdown-toc -->
 * [Revision](#Revision)
 * [Scope](#Scope)
@@ -40,6 +22,27 @@ This document provides an introduction of the high-level design of SONiC Dual To
 		* [4.4.1	Muxcable Firmware Version](#MuxcableFirmwareVersion)
 		* [4.4.2	Muxcable Firmware Download](#MuxcableFirmwareDownload)
 		* [4.4.3	Activate Firmware](#ActivateFirmware)
+		* [4.4.5 Rollback Firmware](#RollbackFirmware)
+
+<!-- vscode-markdown-toc-config
+	numbering=false
+	autoSave=true
+	/vscode-markdown-toc-config -->
+<!-- /vscode-markdown-toc -->
+# SONiC Active-Standby Dual ToR HLD
+
+## <a name='Revision'></a>Revision
+
+|  Rev  |   Date   |    Author     | Change Description             |
+| :---: | :------: | :-----------: | ------------------------------ |
+|  0.1  | 01/03/23 |  Jing Zhang   | Initial version                |
+
+## <a name='Scope'></a>Scope
+
+This document provides an introduction of the high-level design of SONiC Dual ToR with Smart Y-Cable solution. 
+
+## <a name='Content'></a>Content
+
 
 ## <a name='Requirement'></a>1 Requirement
 
@@ -65,13 +68,13 @@ Switch traffic to a healthy link / ToR when there is a link failure.
 * `MUX_LINKMGR|LINK_PROBE`
   * `interval_v4: 100`  ; heartbeat probe interval in millisecond, default value is 100.   
   * `interval_v6: 1000` ; heartbeat probe interval for ipv6 in millisecond, default value is 1000.  
-  * `positive_signal_count: 1` ; event count to confirm a positive state transition, i.e. __unknown__ to __active__.    
-  * `negative_signal_count: 3` ; event count to confirm a negative state transtion, i.e. __active__ to __unknown__.  
-  * `suspend_timer: 500` ; heartbeats will be suspended for duration of `suspend_timer` when heartbeat state transits from __active__ to __unknown__.  
+  * `positive_signal_count: 1` ; event count to confirm a positive state transition, i.e. **unknown** to **active**.    
+  * `negative_signal_count: 3` ; event count to confirm a negative state transtion, i.e. **active** to **unknown**.  
+  * `suspend_timer: 500` ; heartbeats will be suspended for duration of `suspend_timer` when heartbeat state transits from **active** to **unknown**.  
     \*\*This field is not in use anymore. suspending timeout will depend on `interval_v4` and `negative_signal_count`.  
   * `interval_pck_loss_count_update: 300` ; interval to report heartbeat loss count to stream telemetry in heartbeat counts, minimum value is 50, default value is 300.  
 * `MUX_LINKMGR|MUXLOGGER`
-  * `log_verbosity: trace|debug|info|warning|error|fatal` ; log verbosity of __linkmgrd__.  
+  * `log_verbosity: trace|debug|info|warning|error|fatal` ; log verbosity of **linkmgrd**.  
 * `MUX_CABLE|<PORTNAME>`
   * `server_ipv4: ipv4 prefix` 
   * `server_ipv6: ipv6 prefix`
@@ -344,7 +347,7 @@ Output:
 firmware activate successful for Ethernet0
 ```
 
-#### 4.4.5 Rollback Firmware
+#### <a name='RollbackFirmware'></a>4.4.5 Rollback Firmware
 ```
 config muxcable firmware rollback <port_name>
 ```
@@ -354,6 +357,18 @@ sudo config muxcable firmware rollback Ethernet0
 Output:
 firmware rollback successful Ethernet0
 ```
+
+## 5 Modules 
+### 5.1 linkmgrd
+linkmgrd is a simple framework is a simple framework that enables dual ToR to switch/pull the link when it detects loss of health signs. 
+
+linkmgrd module consists of four submodules:
+1.	LinkProber submodule is responsible for monitoring the link health status. It is a simple module that will send ICMP packets and listen to ICMP reply packets. ICMP packet payload will contain information about the originating ToR. LinkProber will report the link as active if it receives ICMP reply for packets that it sends. If LinkProber receives ICMP packet sent by peer ToR, it will report the link as standby. If no response is received, LinkProber will report link status as unknown.
+
+2.	LinkState submodule has two distinctive states: **LinkUp** and LinkDown states. It will listen to state DB for link update messages and updates its state accordingly.
+
+3.	MuxState submodule will report current MUX state retrievable via I2C command. Expected states are: MuxActive, MuxStandby, and MuxUnknown corresponding to MUX pointing to current ToR, MUX pointing to peer ToR, and no response is received from MUX, respectively.
+The above three submodule will have their states processed by LinkManager module. LinkManager will run at frequency slower that its submodule frequencies to prevent as much hysteresis as possible. 
 
 
 
