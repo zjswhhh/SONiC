@@ -68,13 +68,13 @@ Switch traffic to a healthy link / ToR when there is a link failure.
 * `MUX_LINKMGR|LINK_PROBE`
   * `interval_v4: 100`  ; heartbeat probe interval in millisecond, default value is 100.   
   * `interval_v6: 1000` ; heartbeat probe interval for ipv6 in millisecond, default value is 1000.  
-  * `positive_signal_count: 1` ; event count to confirm a positive state transition, i.e. **unknown** to **active**.    
-  * `negative_signal_count: 3` ; event count to confirm a negative state transtion, i.e. **active** to **unknown**.  
-  * `suspend_timer: 500` ; heartbeats will be suspended for duration of `suspend_timer` when heartbeat state transits from **active** to **unknown**.  
+  * `positive_signal_count: 1` ; event count to confirm a positive state transition, i.e. _unknown_ to _active_.    
+  * `negative_signal_count: 3` ; event count to confirm a negative state transtion, i.e. _active_ to _unknown_.  
+  * `suspend_timer: 500` ; heartbeats will be suspended for duration of `suspend_timer` when heartbeat state transits from _active_ to _unknown_.  
     \*\*This field is not in use anymore. suspending timeout will depend on `interval_v4` and `negative_signal_count`.  
   * `interval_pck_loss_count_update: 300` ; interval to report heartbeat loss count to stream telemetry in heartbeat counts, minimum value is 50, default value is 300.  
 * `MUX_LINKMGR|MUXLOGGER`
-  * `log_verbosity: trace|debug|info|warning|error|fatal` ; log verbosity of **linkmgrd**.  
+  * `log_verbosity: trace|debug|info|warning|error|fatal` ; log verbosity of _linkmgrd_.  
 * `MUX_CABLE|<PORTNAME>`
   * `server_ipv4: ipv4 prefix` 
   * `server_ipv6: ipv6 prefix`
