@@ -5,6 +5,7 @@
 | Rev | Date | Author | Change Description |
 | --- | --- | --- | --- |
 | 0.1 | 2026-06-22 | Jing Zhang | Initial design for IPv6-only active-active DualToR control-plane support |
+| 0.2 | 2026-09-08 | Jing Zhang | Clarify endpoint-family selection and IPv6 source-loopback requirements |
 
 ## Overview
 
@@ -60,6 +61,17 @@ As a result, an IPv6-only active-active cluster can miss required mux configurat
 | linkmgrd | <ul><li>Select IPv4 endpoints first when present.</li><li>Use `server_ipv6` and `soc_ipv6` when the matching IPv4 field is absent.</li><li>Use Loopback2 IPv6 as the link-prober source address when the selected probe endpoint is IPv6.</li><li>Use Loopback3 IPv6 as the GUID source component when the selected probe endpoint is IPv6.</li><li>Use ICMPv6 link probing for IPv6-selected endpoints.</li><li>Create IPv6 hardware ICMP echo session fields when hardware probing is enabled for IPv6-selected endpoints.</li></ul> |
 | ycabled | <ul><li>Select `soc_ipv4` first when present.</li><li>Use `soc_ipv6` when `soc_ipv4` is absent.</li></ul> |
 
+Address-family selection is performed independently for each logical endpoint. The `server_*` fields used for server probing and the `soc_*` fields used for SoC probing or gRPC control do not need to select the same family. For example, a port with `server_ipv4` and `soc_ipv6`, but no `soc_ipv4`, uses IPv4 for the server endpoint and IPv6 for the SoC endpoint. This mixed-family configuration is supported.
+
+## Loopback Address Selection
+
+linkmgrd follows the existing active-active DualToR addressing convention: Loopback2 supplies the link-prober source address, while Loopback3 supplies a stable, independently configured source component for link-prober GUID generation. Keeping those roles on their established loopbacks preserves probe routing and GUID identity across IPv4 and IPv6 deployments.
+
+| Selected probe endpoint | Link-prober source address | GUID source component |
+| --- | --- | --- |
+| IPv4 server or SoC address | Loopback2 IPv4 | Loopback3 IPv4 |
+| IPv6 server or SoC address | Loopback2 IPv6 | Loopback3 IPv6 |
+
 ## Examples
 
 IPv6-only active-active port:
@@ -108,12 +120,23 @@ Expected behavior:
 
 ## Compatibility
 
-| Config shape | linkmgrd selected endpoint | ycabled selected endpoint |
+The IPv4-preferred rule applies separately to the `server_*` and `soc_*` field pairs:
+
+| Endpoint field pair | Selected endpoint |
+| --- | --- |
+| IPv4 only | IPv4 |
+| IPv4 and IPv6 | IPv4 |
+| IPv6 only | IPv6 |
+| Neither field present | unavailable |
+
+The independent selections produce the following supported family combinations:
+
+| Server endpoint selection | SoC endpoint selection | Result |
 | --- | --- | --- |
-| `soc_ipv4` only | `soc_ipv4` | `soc_ipv4` |
-| `soc_ipv4` and `soc_ipv6` | `soc_ipv4` | `soc_ipv4` |
-| `soc_ipv6` only | `soc_ipv6` | `soc_ipv6` |
-| Neither field present | unavailable | unavailable |
+| IPv4 | IPv4 | Existing IPv4 behavior |
+| IPv4 | IPv6 | IPv4 server probing and IPv6 SoC probing or gRPC control |
+| IPv6 | IPv4 | IPv6 server probing and IPv4 SoC probing or gRPC control |
+| IPv6 | IPv6 | IPv6-only control-plane behavior |
 
 No migration is required for existing deployments.
 
@@ -124,6 +147,8 @@ For each mux port:
 1. If both IPv4 and IPv6 endpoint fields are missing, leave the endpoint unavailable for that port and log the condition.
 2. If the selected endpoint is malformed, reject that endpoint for the affected port and log the condition.
 3. If IPv4 is present but malformed, do NOT silently fall back to IPv6.
+4. If an IPv6 probe endpoint is selected but Loopback2 has no usable IPv6 address, do not start link probing for the affected port and log the missing source address.
+5. If an IPv6 probe endpoint is selected but Loopback3 has no usable IPv6 address, do not start link probing for the affected port and log the missing GUID source component.
 
 ## Validation
 
